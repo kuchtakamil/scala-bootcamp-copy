@@ -81,7 +81,8 @@ object DataStructures {
   // Exercise. Write a function that checks if all values in a `List` are equal.
   // Think about what you think your function should return if `list` is empty, and why.
   def allEqual[T](list: List[T]): Boolean = {
-    false // TODO: implement
+    list.forall(_ == list.head)
+//    list.distinct.length == 1
   }
 
   // Maps
@@ -123,7 +124,22 @@ object DataStructures {
   // `vegetableAmounts` and prices per unit from `vegetablePrices`. Assume the price is 10 if not available
   // in `vegetablePrices`.
   val totalVegetableCost: Int = {
-    17 // implement here
+    vegetableAmounts.map {
+      case (k, v) => v * vegetablePrices.getOrElse(k, 10)
+    }.sum
+
+//    vegetableAmounts.foldLeft(0) { case (totalCost, (vegetable, amount)) =>
+//      val price = vegetablePrices.getOrElse(vegetable, 10)
+//      totalCost + price * amount
+//    }
+
+//    var sum = 0
+//    for {
+//      (vegetable, amount) <- vegetableAmounts
+//    } {
+//      val price = vegetablePrices.getOrElse(vegetable, 10)
+//      sum += price * amount
+//    }
   }
 
   // Exercise. Given the vegetable weights (per 1 unit of vegetable) in `vegetableWeights` and vegetable
@@ -199,7 +215,7 @@ object DataStructures {
 
   // Homework
   //
-  // Implement a special sort which sorts the keys of a map (K) according to their associated
+  // In Scala language implement a special sort which sorts the keys of a map (K) according to their associated
   // values (V).
   //
   // In case of "ties" (equal values) it should group these keys K into Set-s in the results.
@@ -214,5 +230,23 @@ object DataStructures {
   //
   // Input `Map("a" -> 1, "b" -> 2, "c" -> 4, "d" -> 1, "e" -> 0, "f" -> 2, "g" -> 2)` should result in
   // output `List(Set("e") -> 0, Set("a", "d") -> 1, Set("b", "f", "g") -> 2, Set("c") -> 4)`.
-  def sortConsideringEqualValues[T](map: Map[T, Int]): List[(Set[T], Int)] = ???
+  def sortConsideringEqualValues[T](map: Map[T, Int]): List[(Set[T], Int)] = {
+    println("map.groupBy(_._2) === " + map.groupBy(_._2))
+    println("map.groupBy(_._2).toList ===" + map.groupBy(_._2).toList)
+    map.groupBy(_._2).toList
+      .map { case (k, v) => (v.keys.toSet, k) }
+      .sortBy(_._2)
+
+//    map.groupBy(_._2)
+//      .mapValues(m => m.keys.toSet)
+//      .toList
+//      .sortBy(_._1)
+//      .map(identity)
+
+//    def sortMapByValue[K, V](map: Map[K, V])(implicit ord: Ordering[V]): List[(Set[K], V)] = {
+//      val grouped = map.groupBy { case (_, v) => v }
+//        .mapValues { case kvs => kvs.map { case (k, _) => k }.toSet }
+//      grouped.toList.sortBy { case (_, v) => v }
+//    }
+  }
 }

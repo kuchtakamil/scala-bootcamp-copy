@@ -41,9 +41,13 @@ object FPJson extends App {
 
     implicit val playerJsonable: Jsonable[Player] = ???
 
-    implicit val intJsonable: Jsonable[Int] = ???
+    implicit val intJsonable: Jsonable[Int] = (value: Int) => Json(value.toString)
 
-    implicit val optionIntJsonable: Jsonable[Option[Int]] = ???
+    implicit val optionIntJsonable: Jsonable[Option[Int]] = new Jsonable[Option[Int]] {
+      override def toJson(entity: Option[Int]): Json = entity match {
+        case Some(value) => intJsonable.toJson(value)
+        case None => Json("null")
+    }
   }
 
   object GenericImplicitsTask {
@@ -57,7 +61,9 @@ object FPJson extends App {
           }
       }
 
-    implicit def listJsonable[A](implicit jsonableA: Jsonable[A]): Jsonable[List[A]] = ???
+    implicit def listJsonable[A](implicit jsonableA: Jsonable[A]): Jsonable[List[A]] = new Jsonable[List[A]] {
+      override def toJson(entity: List[A]): Json =
+        Json(entity.map(jsonableA.toJson(_)).mkString("[", ",", "]"))
   }
 
   object SingleAbstractMethod {
@@ -66,14 +72,15 @@ object FPJson extends App {
       def toJson(game: Game): Json = Json(s"{${'"'}id${'"'}:${game.id}}")
     }
 
-    implicit val after: Jsonable[Game] = ???
+    implicit val after: Jsonable[Game] = game => Json(s"{${'"'}id${'"'}:${game.id}}")
   }
 
   object ContextBound {
 
     def prettyPrintBefore[A](a: A)(implicit jsonable: Jsonable[A]): Unit = println(jsonable.toJson(a))
 
-    def prettyPrintAfter[A: Jsonable](a: A): Unit = ???
+    def prettyPrintAfter[A: Jsonable](a: A): Unit = println(implicitly[Jsonable[A]].toJson((a)))
+//    def prettyPrintAfter[A: Jsonable](a: A): Unit = println(Jsonable[A].toJson((a)))
   }
 
   object Summoner {
@@ -87,7 +94,11 @@ object FPJson extends App {
       println(jsonable.toJson(a))
     }
 
-    def prettyPrintWithSummoner[A: Jsonable](a: A): Unit = ???
+    def prettyPrintWithSummoner[A: Jsonable](a: A): Unit = {
+//      val jsonable = Jsonable.apply[A]
+      val jsonable = Jsonable[A]
+      println(jsonable.toJson(a))
+    }
   }
 
   object Syntax {
@@ -104,7 +115,8 @@ object FPJson extends App {
       }
     }
 
-    def prettyPrintWithSyntax[A: Jsonable](a: A): Unit = ???
+    import JsonableSyntax._
+    def prettyPrintWithSyntax[A: Jsonable](a: A): Unit = println(a.toJson)
   }
 }
 

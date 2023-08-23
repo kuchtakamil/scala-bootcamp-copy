@@ -1,5 +1,7 @@
 package com.evolutiongaming.bootcamp.basics
 
+
+
 object ClassesAndTraits {
   // You can follow your progress using the tests in `ClassesAndTraitsSpec`:
   //   sbt "testOnly com.evolutiongaming.bootcamp.basics.ClassesAndTraitsSpec"
@@ -11,8 +13,9 @@ object ClassesAndTraits {
     def addMoney(amount: Double): Unit = changeBalance(amount)
     def takeMoney(amount: Double): Unit = changeBalance(-amount)
 
-    private def changeBalance(amount: Double): Unit =
+    private def changeBalance(amount: Double): Unit = {
       balance += amount
+    }
 
     override def toString: String =
       s"User($login, $balance)"
@@ -30,11 +33,50 @@ object ClassesAndTraits {
     def apply(login: String): MutableUser = new MutableUser(login, 0)
 
     def unapply(user: MutableUser): Option[(String, Double)] = Some(user.login, user.balance)
+
+    def foo() : Int = 3
+    def bar() : Int = 5
   }
 
   val mutableUser = MutableUser("potter")
+  MutableUser.foo()
   mutableUser.login // "potter"
   mutableUser.balance // 0.0
+
+  class MyUser {
+    def introduceYourself: String = "I'm not you"
+    private def myFun: String = "foo"
+    private val myVal: String = "val"
+  }
+//  class MyBadUser extends MyUser {
+//    def destroy = introduceYourself + " and will destroy you"
+//  }
+  object MyUser {
+    def andSaySomething: String = "sheep"  // + introduceYourself
+  private val prr: Int = 8
+  }
+//  object Walter extends MyUser {
+//    def sayMyName: String = "Heisenberg" + introduceYourself // + andSaySomething
+//  }
+
+//  val myUser = new MyUser
+//  val myUser2 = MyUser
+//  val walter = Walter
+//  myUser.introduceYourself
+//  myUser2.andSaySomething
+//  walter.sayMyName
+
+  case class Name private (value: String)
+
+  object Name {
+    def apply(value: String): Name = new Name(value)
+  }
+
+  class Name2 private (val value: String)
+
+  object Name2 {
+    def apply(value: String): Name2 = new Name2(value)
+  }
 
   // Question. Is MutableUser a good design? Why or why not?
 
@@ -60,7 +102,7 @@ object ClassesAndTraits {
   //
   def totalBalance(accounts: List[HasBalance]): HasBalance =
     new HasBalance {
-      def balance: Double = ???
+      def balance: Double = accounts.map(_.balance).sum
     }
 
   trait Account extends HasBalance {
@@ -72,9 +114,15 @@ object ClassesAndTraits {
     def login: String
   }
 
-  final case class RegularUser(login: String, balance: Double) extends User with Account
+  final case class RegularUser(login: String, balance: Double) extends User with Account {
+
+  }
 
   case object Admin extends User {
+    val login: String = "admin"
+  }
+
+  object Admin2 extends User {
     val login: String = "admin"
   }
 
@@ -99,6 +147,7 @@ object ClassesAndTraits {
 
   // calls .apply method
   val user = RegularUser("potter", 200)
+
 
   // calls .unapply method
   val RegularUser(login, balance) = user

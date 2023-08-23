@@ -35,7 +35,12 @@ object ImplicitParameters {
     // - Implement `AwardService` in terms of `CreditService` and `DebitService` calls.
     class CreditService {
       /** Gives money to wallet, creates a wallet if does not exist yet */
-      def credit(context: WalletContext, amount: BigDecimal): Unit = ???
+      def credit(context: WalletContext, amount: BigDecimal): Unit = {
+        context.read.foreach {walletAmount =>
+          val newAmount = walletAmount + amount
+          context.update(newAmount)
+        }
+      }
     }
     class DebitService {
       /** Removes money from wallet */

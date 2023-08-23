@@ -1,6 +1,11 @@
 package com.evolutiongaming.bootcamp.error_handling
 
+import cats.data.Validated
+import cats.data.Validated.Valid
+import com.evolutiongaming.bootcamp.functions.Functions.NonEmptyList
+
 import scala.concurrent.Future
+import scala.util.Try
 import scala.util.control.NonFatal
 
 object ErrorHandling extends App {
@@ -55,7 +60,7 @@ object ErrorHandling extends App {
   // can go wrong or there is no interest in a particular reason for a failure.
 
   // Exercise. Implement `parseIntOption` method.
-  def parseIntOption(string: String): Option[Int] = ???
+  def parseIntOption(string: String): Option[Int] = string.toIntOption
 
   // The downside of Option is that it does not encode any information about what exactly went wrong. It only
   // states the mere fact that it did.
@@ -69,7 +74,9 @@ object ErrorHandling extends App {
 
   // Exercise. Implement `parseIntEither` method, returning the parsed integer as `Right` upon success and
   // "{{string}} does not contain an integer" as `Left` upon failure.
-  def parseIntEither(string: String): Either[String, Int] = ???
+//  def parseIntEither(string: String): Either[String, Int] = Try(string.toInt).toEither.left.map(_ => s"Invalid input: $string")
+  def parseIntEither(string: String): Either[String, Int] = string.toIntOption.toRight("Parse error")
+
 
   // As an alternative to `String`, a proper ADT can be introduced to formalize all error cases. As discussed
   // in `AlgebraicDataTypes` section, this provides a number of benefits, including an exhaustiveness check
@@ -87,9 +94,20 @@ object ErrorHandling extends App {
     /** Returned when amount to credit is within the valid range, but has more than 2 decimal places. */
     final case object TooManyDecimals extends TransferError
   }
+//  type MyMap[A, B] = Map[A, B]
+//  def foo(): Int MyMap String = ???
   // Exercise. Implement `credit` method, returning `Unit` as `Right` upon success and the appropriate
   // `TransferError` as `Left` upon failure.
-  def credit(amount: BigDecimal): Either[TransferError, Unit] = ???
+  type `¯|_(ツ)_|¯`[A, B] = Either[A, B]
+  def credit(amount: BigDecimal): TransferError `¯|_(ツ)_|¯` Unit =
+    if (amount < 0) Left(TransferError.NegativeAmount)
+    else if (amount == 0) Left(TransferError.ZeroAmount)
+    else if (amount >= 1000000) Left(TransferError.AmountIsTooLarge)
+    else if (amount.scale > 2) Left(TransferError.TooManyDecimals)
+    else Right(())
+
+//  def credit(amount: BigDecimal): Either[NonEmptyList[TransferError], Unit] =
+
 
   // `Either[Throwable, A]` is similar to `Try[A]`. However, because `Try[A]` has its error channel hardcoded
   // to a specific type and `Either[L, R]` does not, `Try[A]` provides more specific methods to deal with
@@ -149,8 +167,8 @@ object ErrorHandling extends App {
     private def validateUsername(username: String): AllErrorsOr[Username] = {
 
       def validateUsernameLength: AllErrorsOr[String] =
-        if (username.length >= 3 && username.length <= 30) username.validNec
-        else UsernameLengthIsInvalid.invalidNec
+        if (username.length >= 3 && username.length <= 30) username.validNec //Validated.Valid(username)
+        else UsernameLengthIsInvalid.invalidNec // Validated.Invalid(NonEmptyChain.one(UsernameLengthIsInvalid))
 
       def validateUsernameContents: AllErrorsOr[String] =
         if (username.matches("^[a-zA-Z0-9]+$")) username.validNec
@@ -160,12 +178,31 @@ object ErrorHandling extends App {
       // `AllErrorsOr[String]`. However, it ignores the result of the validator on the left and uses only the
       // result of the validator on the right (hence the `R` suffix).
       validateUsernameLength.productR(validateUsernameContents).map(Username)
+
     }
+//    def one: AllErrorsOr[Boolean] = Validated.Valid(true)
+//    def two: AllErrorsOr[Boolean] = Validated.Invalid(false)
+//    one *> two
 
     // Exercise. Implement `validateAge` method, so that it returns `AgeIsNotNumeric` if the age string is not
     // a number and `AgeIsOutOfBounds` if the age is not between 18 and 75. Otherwise the age should be
     // considered valid and returned inside `AllErrorsOr`.
-    private def validateAge(age: String): AllErrorsOr[Age] = ???
+    private def validateAge(age: String): AllErrorsOr[Age] = {
+      age
+        .toIntOption
+        .toValidNec(AgeIsNotNumeric)
+        .andThen(age =>
+          Validated
+            .condNec(age >= 18 && age <= 75, Age(age), AgeIsOutOfBounds))
+
+//      def validateInt(value: String): AllErrorsOr[Int] =
+//        parseIntEither(value).leftMap(_ => AgeIsNotNumeric).toValidatedNec
+//
+//      def validateBounds(value: Int): AllErrorsOr[Int] =
+//        Either.cond(value >= 18 && value <= 75, value, AgeIsOutOfBounds).toValidatedNec
+//
+//      validateInt(age) andThen validateBounds map Age
+    }
 
     // `validate` method takes raw username and age values (for example, as received via POST request),
     // validates them, transforms as needed and returns `AllErrorsOr[Student]` as a result. `mapN` method

@@ -13,7 +13,7 @@ object ContextBounds {
     // For `Int` using `concat` function above. For others, use built-in methods.
 
     // `repeat(72, 3)` should return `727272`
-    def repeat(a: Int, times: Int): Int = ???
+    def repeat(a: Int, times: Int): Int = (1 until times)
 
     // `repeat("Scala", 3)` should return `"ScalaScalaScala"`
     def repeat(a: String, times: Int): String = ???

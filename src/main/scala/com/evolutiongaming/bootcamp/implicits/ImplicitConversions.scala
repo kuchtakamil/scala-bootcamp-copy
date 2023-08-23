@@ -32,4 +32,21 @@ object ImplicitConversions extends App {
   // This should compile
   // println(7.pow(2))
 
+  object LibA {
+    trait Json[A] {
+      def toJason(i: A): String
+    }
+  }
+
+  object LibB {
+    trait Serializable[A] {
+      def serializable(i: A): String
+    }
+  }
+
+  trait Foo
+  implicit val fooJson: LibB.Serializable[Foo] = ???
+  implicit def libBtoA[A](implicit s: LibB.Serializable[A]): LibA.Json[A] = ???
+  def http200[A](a: A)(implicit json: LibA.Json[A]): Unit = ???
+  http200(new Foo{})
 }

@@ -1,7 +1,9 @@
 package com.evolutiongaming.bootcamp.basics
 
-import java.io.FileNotFoundException
+import akka.io.dns.RecordType.A
+import slick.collection.heterogeneous.Zero.+
 
+import java.io.FileNotFoundException
 import scala.annotation.tailrec
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -32,7 +34,11 @@ object ControlStructures {
   // Exercise. Implement a "Fizz-Buzz" https://en.wikipedia.org/wiki/Fizz_buzz function using the if-else,
   // returning "fizzbuzz" for numbers which divide with 15, "fizz" for those which divide by 3 and "buzz" for
   // those which divide with 5, and returning the input number as a string for other numbers:
-  def fizzBuzz1(n: Int): String = ???
+  def fizzBuzz1(n: Int): String =
+    if (n % 15 == 0) "fizzbuzz"
+    else if (n % 3 == 0) "fizz"
+    else if (n % 5 == 0) "buzz"
+    else n.toString
 
   // Pattern Matching
   //
@@ -105,16 +111,63 @@ object ControlStructures {
   }
 
   // Exercise. Implement a "Fizz-Buzz" function using pattern matching:
-  def fizzBuzz2(n: Int): String = ???
+// WRONG!!!
+//  def fizzBuzz2(n: Int): String = n match {
+//    case (_ % 15 == 0) => "fizzbuzz"
+//    case (_ % 5 == 0) => "buzz"
+//    case (_ % 3 == 0) => "fizz"
+//  }
+
+//  def fizzBuzz2(n: Int): String = n match {
+//    case n if n % 15 == 0 => "fizzbuzz"
+//    case n if n % 3 == 0 => "fizz"
+//    case n if n % 5 == 0 => "buzz"
+//    case _ => n.toString
+//  }
+//
+  def fizzBuzz2(n: Int): String = (n % 3, n % 5) match {
+    case (0, 0) => "FizzBuzz"
+    case (0, _) => "Fizz"
+    case (_, 0) => "Buzz"
+    case _ => n.toString
+  }
 
   // Recursion
   //
   // A function which calls itself is called a recursive function. This is a commonly used way how to
   // express looping constructs in Functional Programming languages.
 
-  def sum1(list: List[Int]): Int =
-    if (list.isEmpty) 0
-    else list.head + sum1(list.tail)
+//  def sum1(list: List[Int]): Int =
+//    if (list.isEmpty) 0
+//    else list.head + sum1(list.tail)
+
+  def sum1(list: List[Int]): Int = list match {
+    case Nil  => 0
+    case head :: tail => head + sum1(tail)
+  }
+
+  @tailrec
+  def sumTail(list: List[Int], acc: Int = 0): Int = list match {
+    case Nil => acc
+    case head :: tail => sumTail(tail, acc + head)
+  }
+
+  class MyCollection[A] {
+    @tailrec
+    final def sumTail(list: List[Int], acc: Int = 0): Int = list match {
+      case Nil => acc
+      case head :: tail => sumTail(tail, acc + head)
+    }
+  }
+
+//  class MyCollection2[A] {
+//    final def sum(list: List[Int]): Int = list match {
+//    @tailrec
+//    def loop(list: List[Int], acc: Int = 0): Int = list match
+//      case Nil => acc
+//      case head :: tail => sumTail(tail, acc + head)
+//    }
+//  }
 
   // Question. What are the risks of List#head and List#tail? How can you refactor `sum1` to avoid these invocations?
 
@@ -140,6 +193,7 @@ object ControlStructures {
   def sum4(list: List[Int]): Int =
     if (list.isEmpty) 0
     else list.reduce((a, b) => a + b)
+    //  else list.reduce(_ + _)
 
   def sum5(list: List[Int]): Int =
     list.sum // only for Numeric lists
@@ -149,14 +203,18 @@ object ControlStructures {
   //
   // Thus `applyNTimesForInts(_ + 1, 4)(3)` should return `((((3 + 1) + 1) + 1) + 1)` or `7`.
   def applyNTimesForInts(f: Int => Int, n: Int): Int => Int = { x: Int =>
-    f(x + n) // replace with a correct implementation
+    @tailrec
+    def loop(n: Int, acc: Int): Int = n match {
+      case 0 => acc
+      case _ => loop(n - 1, f(acc))
+    }
+    loop(n, x)
+//    f(x + n) // replace with a correct implementation
   }
 
   // Exercise: Convert the function `applyNTimesForInts` into a polymorphic function `applyNTimes`:
   def applyNTimes[A](f: A => A, n: Int): A => A = { x: A =>
-    // replace with correct implementation
-    println(n)
-    f(x)
+    List.range(0, n).foldLeft(x)((acc, _) => f(acc))
   }
 
   // `map`, `flatMap` and `filter` are not control structures, but methods that various collections (and
@@ -188,6 +246,10 @@ object ControlStructures {
   object list_flatmap_example { // name-spacing to not break other code in this lesson
     class List[A] {
       def flatMap[B](f: A => List[B]): List[B] = ???
+    }
+
+    class Option[A] {
+      def flatMap[B](f: A => Option[B]): Option[B] = ???
     }
   }
 
@@ -246,6 +308,37 @@ object ControlStructures {
 
   // Question. What is the value of `e` above?
 
+  sealed abstract class OurOption[+A] {
+    def map[B](f: A => B): OurOption[B] = this match {
+      case OurNone => OurNone
+      case OurSome(value) => OurSome(f(value))
+    }
+
+    def flatMap[B](f: A => OurOption[B]): OurOption[B] = this match {
+      case OurNone => OurNone
+      case OurSome(value) => f(value)
+    }
+
+    def withFilter[B](p: A => Boolean): OurOption[A] = this match {
+      case OurSome(value) if p(value) => this
+      case _ => OurNone
+    }
+  }
+
+  case object OurNone extends OurOption[Nothing]
+
+  case class OurSome[A](value: A) extends OurOption[A]
+
+  val opt1: OurOption[Int] = OurSome(11)
+  val opt2: OurOption[Int] = OurNone
+
+  val result = for {
+    num1 <- opt1 if num1 > 5
+    num2 <- opt2
+  } yield num1
+  def main(args: Array[UserId]): Unit = {
+    println(result)
+  }
   // In idiomatic functional Scala, much of the code ends up written in "for comprehensions".
   // Exercise. Implement `makeTransfer` using `for` comprehensions and the methods provided in `UserService`.
 
@@ -275,7 +368,17 @@ object ControlStructures {
     // amount, respectively):
     println(s"$service, $fromUserWithName, $toUserWithName, $amount")
     import service._
-    ???
+    for {
+      _ <- validateUserName(fromUserWithName)
+      _ <- validateUserName(toUserWithName)
+      fromUserId <- findUserId(fromUserWithName)
+      toUserId <- findUserId(toUserWithName)
+      _ <- validateAmount(amount)
+      fromUserBalance <- findBalance(fromUserId)
+      toUserBalance <- findBalance(toUserId)
+      newFromUserBalance <- updateAccount(fromUserId, fromUserBalance, -amount)
+      toFromUserBalance <- updateAccount(toUserId, toUserBalance, amount)
+    } yield (newFromUserBalance, toFromUserBalance)
   }
 
   // Question. What are the questions would you ask - especially about requirements - before implementing
@@ -295,7 +398,23 @@ object ControlStructures {
   //
   // Use a "for comprehension" in your solution.
 
-  val AProductB: Set[(Int, Boolean)] = Set()
+  val  A = Set(0, 1, 2)
+  val  B = Set(true, false)
+  val AProductB: Set[(Int, Boolean)] = for {
+    a <- A
+    b <- B
+  } yield (a, b)
+
+//  result ---> Set(
+//    (0, true),
+//    (1, true),
+//    (2, true),
+//    (0, false),
+//    (1, false),
+//    (2, false),
+//  )
+
+
 
   // Exercise:
   //
@@ -306,8 +425,12 @@ object ControlStructures {
   // List all the elements in `A + B`.
   //
   // Use "map" and `++` (`Set` union operation) in your solution.
+  val ASumB: Set[Either[Int, Boolean]] = A.map(Left(_)) ++ B.map(Right(_))
 
-  val ASumB: Set[Either[Int, Boolean]] = Set()
+// result ---> Set(
+//    Left(0), Left(1), Left(2),
+//    Right(true), Right(false),
+//  )
 
   // Scala inherits the standard try-catch-finally construct from Java:
   def printFile(fileName: String): Unit = {
@@ -332,11 +455,22 @@ object ControlStructures {
   // One of these other mechanisms is `Try[A]` which can be thought of as an `Either[Throwable, A]`:
 
   def parseInt1(x: String): Try[Int] = Try(x.toInt)
+  def parseInt2(x: String): Option[Int] = x.toIntOption
+  import cats.syntax.either._
+  def parseInt3(x: String): Either[String, Int] =
+    Try(x.toInt).toEither.leftMap(e => s"Failed to parse $x: ${e.getMessage}")
+//  parseInt3 == parseInt4
+  def parseInt4(x: String): Either[String, Int] = try {
+    Right(x.toInt)
+  } catch {
+    case e: Exception => Left(s"Failed to parse $x: ${e.getMessage}")
+  }
 
   parseInt1("asdf") match {
     case Success(value) => println(value)
     case Failure(error) => println(error)
   }
+
 
   // Question. What other ways of representing the "parse string to integer" results can you think of?
   // What are the benefits and drawbacks of each?

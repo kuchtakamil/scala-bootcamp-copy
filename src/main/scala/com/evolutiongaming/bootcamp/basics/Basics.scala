@@ -63,7 +63,7 @@ object Basics {
   val bool2: Boolean = false
 
   // Exercise. List all boolean values.
-  val allBooleans: Set[Boolean] = Set( /* add values here, separated by commas */ )
+  val allBooleans: Set[Boolean] = Set( true, false )
 
   /* Common boolean operations:
       !false          // true - `!` is negation
@@ -251,10 +251,10 @@ object Basics {
   // Try defining it using both String concatenation and interpolation.
   //
   // Note. `???` can be used to indicate code that is yet to be implemented.
-  def helloMethod(name: String): String = ???
+  def helloMethod(name: String): String = s"Hello, $name!"
 
   // Exercise. Define a method "add" which takes two integers and returns their sum.
-  def add(a: Int, b: Int): Int = a * 42 - b / 4 // replace with a correct implementation
+  def add(a: Int, b: Int): Int = a + b // replace with a correct implementation
 
   // You can use parameter names to specify them in a different order
   val sum1 = add(b = 2, a = 3) // addition is commutative though so it doesn't change the result
@@ -276,11 +276,11 @@ object Basics {
   // Exercise. Implement `helloFunction` using `helloMethod` you implemented above. Why was the type
   // annotation skipped when defining `helloFunction`?
 
-  val helloFunction: String => String = (name: String) => /* implement here */ name
+  val helloFunction: String => String = (name: String) => helloMethod(name)
 
   // Exercise. Using the aforementioned String `length` implement a `stringLength` function which returns
   // the length of the String passed.
-  val stringLength: String => Int = (s: String) => /* implement here */ s.hashCode()
+  val stringLength: String => Int = (s: String) => s.length
 
   // If each argument of a function is used exactly once, you can use `_` to refer to them
   val addFunction: (Int, Int) => Int = _ + _
@@ -347,10 +347,9 @@ object Basics {
   // `toDouble` (for converting Byte-s and Int-s to Double-s).
 
   def power(n: Byte): Int => Long = { x: Int =>
-    // implement here
-    (x + n).toLong
+    Math.pow(x.toDouble, n.toDouble).round
   }
-
+//  def power(n: Byte): Int => Long = Math.pow(_, n).toLong
   private val squared: Int => Long = power(2)
   private val fourSquared = squared(4)
 
