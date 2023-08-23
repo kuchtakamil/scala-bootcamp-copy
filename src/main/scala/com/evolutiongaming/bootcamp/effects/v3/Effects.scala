@@ -194,7 +194,7 @@ object Exercise1_Imperative {
       case Some(x) =>
         println(x)
 
-      case None    =>
+      case None =>
         if (counter >= 2) {
           println("I am disappointed. You have failed to answer too many times.")
           sys.exit(1)
@@ -240,7 +240,7 @@ object SuspendApp extends IOApp {
   private def fib(
     n: Int,
     a: Long = 0,
-    b: Long = 1
+    b: Long = 1,
   ): IO[Long] =
     n match {
       case 0 => IO.pure(a)
@@ -322,25 +322,25 @@ object ErrorsHandling extends IOApp {
       _               <- putString(s"handleErrorWith = $handleErrorWith")
 
       recover <- failingProgram.recover {
-                   case x if x.getMessage == "errorMessage" => s"error: ${x.getMessage}"
-                 }
+        case x if x.getMessage == "errorMessage" => s"error: ${x.getMessage}"
+      }
       _       <- putString(s"recover = $recover")
 
       recoverWith <- failingProgram.recoverWith {
-                       case x if x.getMessage == "errorMessage" => IO.pure(s"error: ${x.getMessage}")
-                     }
+        case x if x.getMessage == "errorMessage" => IO.pure(s"error: ${x.getMessage}")
+      }
       _           <- putString(s"recoverWith = $recoverWith")
 
       redeem <- failingProgram.redeem(
-                  (x: Throwable) => s"error: ${x.getMessage}",
-                  (x: String) => s"success: $x"
-                )
+        (x: Throwable) => s"error: ${x.getMessage}",
+        (x: String) => s"success: $x",
+      )
       _      <- putString(s"redeem = $redeem")
 
       redeemWith <- failingProgram.redeemWith(
-                      (x: Throwable) => IO.pure(s"error: ${x.getMessage}"),
-                      (x: String) => IO.pure(s"success: $x")
-                    )
+        (x: Throwable) => IO.pure(s"error: ${x.getMessage}"),
+        (x: String) => IO.pure(s"success: $x"),
+      )
       _          <- putString(s"redeemWith = $redeemWith")
     } yield ExitCode.Success
 }
@@ -424,39 +424,39 @@ object AsyncApp extends IOApp {
 
   private val ec = Executors.newFixedThreadPool(4)
 
-  def request(url: String, callback: Either[Throwable, Int] => Unit): Unit = {
-    val thread = new Thread() {
-      override def run(): Unit = {
-        println(s"Thread from pool: ${Thread.currentThread().getName}")
-        val status = Try(requests.get(url).statusCode)
-        callback(status.toEither)
-      }
+  def requestAndChangeThread(callback: Either[Throwable, Int] => Unit): Unit = {
+    val runnable: Runnable = () => {
+      println(s"Thread from pool: ${Thread.currentThread().getName}")
+      callback(getGoogleStatus())
     }
 
-    ec.execute(thread)
+    ec.execute(runnable)
   }
 
-  def requestF[F[_]: Async](url: String): F[Int] =
+  def requestF[F[_]: Async]: F[Int] =
     Async[F].async_ { cb =>
       println(s"Starting async: ${Thread.currentThread().getName}")
-      val status = Try(requests.get(url).statusCode)
-      cb(status.toEither)
-//      request(url, cb)
+//      cb(getGoogleStatus())
+      requestAndChangeThread(cb)
     }
 
   override def run(args: List[String]): IO[ExitCode] = {
     val app = for {
-      response <- IO(StdIn.readLine()) >>= requestF[IO]
+      _        <- IO(println(s"Starting run: ${Thread.currentThread().getName}"))
+      response <- requestF[IO]
       _        <- IO(println(s"Finished: ${Thread.currentThread().getName}"))
       _        <- IO(println(response))
     } yield ()
 
     app.guarantee(IO(ec.shutdown())) as ExitCode.Success
   }
+
+  private def getGoogleStatus(): Either[Throwable, Int] = {
+    Try(requests.get("https://www.google.com").statusCode).toEither
+  }
 }
 
-/**
-  * `IO.never` represents a non-terminating `IO`
+/** `IO.never` represents a non-terminating `IO`
   */
 object Never extends IOApp {
   def run(args: List[String]): IO[ExitCode] = IO.never

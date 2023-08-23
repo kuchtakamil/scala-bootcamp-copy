@@ -9,38 +9,42 @@ object Example2 extends App {
 
   class EmployeeShoppingBasketActor extends PersistentActor {
 
+    // state
     private var basket = List.empty[String]
 
     override def receiveRecover: Receive = {
 
+      // During recovery, the persistent actor is offered the latest saved snapshot via a SnapshotOffer message
+      // from which it can initialize internal state.
+      // SnapshotMetadata: persistenceId, sequenceNr, timestamp
       case SnapshotOffer(metadata, basketFromSnapshot: List[String]) =>
         println("Snapshot received: " + basketFromSnapshot)
         println("Last stored event: " + metadata.sequenceNr)
         basket = basketFromSnapshot
 
       case RecoveryCompleted =>
-        // log that we covered from snapshot successfully
-        // measure recovery time
+        println("Recovered state " + basket)
+      // log that we covered from snapshot successfully
+      // measure recovery time
 
       case event: String =>
         basket = event :: basket
         println(s"Received $event")
     }
 
-    override def receiveCommand: Receive = {
-      case item: String =>
-
-        persist(item) { e =>
-          basket = item :: basket // storing item to basket
-          println(s"Storing event $e")
-          // As we only add items, in sake of simplicity, let's store snapshot each 5th item.
-          if (basket.size % 5 == 0)
-            saveSnapshot(basket)
+    override def receiveCommand: Receive = { case item: String =>
+      persist(item) { e =>
+        basket = item :: basket // storing item to basket
+        println(s"Storing event $e")
+        // As we only add items, in sake of simplicity, let's store snapshot each 5th item.
+        if (basket.size % 5 == 0) {
+          println(s"Storing snapshot on event $e")
+          saveSnapshot(basket)
         }
+      }
     }
 
-    // user id, we will see how to deal with it in future
-    override def persistenceId: String = "user-123"
+    override def persistenceId: String = "user-121"
 
   }
 

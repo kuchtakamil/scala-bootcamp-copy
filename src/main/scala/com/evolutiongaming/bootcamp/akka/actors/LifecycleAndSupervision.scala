@@ -10,17 +10,24 @@ object LifecycleAndSupervision extends App {
     import Worker._
 
     // Hooks
-    override def preStart(): Unit = {
+
+    // called before an actor starts processing messages
+    // a good place to perform any initialization required
+    override def preStart(): Unit                                          = {
       println("pre start")
     }
-    override def postStop(): Unit = {
-      println("post stop")
-    }
+    // called on old instance
     override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-      println(s"pre restart reason: ${ reason.getMessage }")
+      println(s"pre restart reason: ${reason.getMessage}")
     }
-    override def postRestart(reason: Throwable): Unit = {
+    // called on new instance
+    override def postRestart(reason: Throwable): Unit                      = {
       println("post restart")
+    }
+    // called on stop
+    // a good place to perform any cleanup required
+    override def postStop(): Unit                                          = {
+      println("post stop")
     }
 
     override def receive: Receive = {
@@ -41,11 +48,24 @@ object LifecycleAndSupervision extends App {
     case object ResumeCommand
   }
 
+  // if a child actor throws an exception,
+  // the parent actor can choose to either stop the child actor or restart it using a supervision strategy.
+
+  // 1. restart
+  // only swaps the `Actor` instance defined by the `Props` but the `ActorRef` remains the same
+
+  // 2. stop
+  // if an actor is stopped all messages to old `ActorRef` will go to DeadLetter.
+  // DeadLetter is responsible for receiving any messages that could not be delivered to their intended recipient.
+
+  // 3. resume
+  // 4. escalate
 
   final class SupervisorActor extends Actor {
-    // when supervisorStrategy is not specified, actor uses SupervisorStrategy.defaultDecider
-    override val supervisorStrategy: SupervisorStrategy =
-    // one for one - only for one failed child actor
+    // when supervisorStrategy is not specified, actor uses [[SupervisorStrategy.defaultDecider]]
+    override val supervisorStrategy: SupervisorStrategy = {
+      // `OneForOneStrategy` means that it only applies to the failed actor and not its siblings in the actor hierarchy.
+      // if the actor fails 2 times within 1 sec, it will be stopped permanently
       OneForOneStrategy(maxNrOfRetries = 2, withinTimeRange = 1.second) {
         case _: NoSuchElementException =>
           println("worker resumes")
@@ -60,6 +80,7 @@ object LifecycleAndSupervision extends App {
           println("error escalates") // will be applied `Restart` on higher level
           SupervisorStrategy.Escalate
       }
+    }
 
     // child
     private val worker: ActorRef = context.actorOf(props = Props[Worker](), name = "worker")
@@ -74,11 +95,11 @@ object LifecycleAndSupervision extends App {
 
   // playground
   val evoActorSystem: ActorSystem = ActorSystem("evo-actor-system")
-  val supervisorActor: ActorRef = evoActorSystem.actorOf(Props[SupervisorActor]())
+  val supervisorActor: ActorRef   = evoActorSystem.actorOf(Props[SupervisorActor]())
   import Worker._
 
   // 1
-  // supervisorActor ! ResumeCommand
+  supervisorActor ! ResumeCommand
   // pre start
   // - exception time: decision resume
   // worker resume
@@ -116,7 +137,6 @@ object LifecycleAndSupervision extends App {
   // worker escalate
   // post stop
   // pre start
-
 
   import evoActorSystem.dispatcher
   // evoActorSystem.scheduler.scheduleOnce(10.seconds) { evoActorSystem.terminate() }

@@ -56,20 +56,22 @@ object TypeClassesExamples extends App {
     def map[A, B](fa: F[A])(f: A => B): F[B]
   }
 
-  implicit class FunctorOps[F[_]: Functor, A](fa: F[A]) {
-    def map[B](f: A => B): F[B] = Functor[F].map(fa)(f)
-  }
-
   object Functor {
     def apply[F[_]: Functor]: Functor[F] = implicitly[Functor[F]]
+  }
+
+  implicit class FunctorOps[F[_]: Functor, A](fa: F[A]) {
+    def map[B](f: A => B): F[B] = Functor[F].map(fa)(f)
   }
 
   implicit val optionFunctor: Functor[Option] = new Functor[Option] {
     def map[A, B](fa: Option[A])(f: A => B): Option[B] = fa.map(f)
   }
 
+  // 3.1. Implement Functor for Map values
+
   // 4. Semigroupal
-  // 4.1. Implement Semigroupal which provides `product` method,
+  // 4.1. Semigroupal provides `product` method,
   // so in combination with Functor we'll be able to call for example `plus` on two Options (its content)
   trait Semigroupal[F[_]] {
     def product[A, B](fa: F[A], fb: F[B]): F[(A, B)]
@@ -113,9 +115,17 @@ object TypeClassesExamples extends App {
     def pure[A](x: A): F[A]
   }
 
+  object Applicative {
+    def apply[F[_]: Applicative]: Applicative[F] = implicitly
+  }
+
+  implicit class ApplicativeValueOps[F[_]: Applicative, A](a: A) {
+    def pure: F[A] = Applicative[F].pure(a)
+  }
+
   // 5.1. Implement Applicative for Option, Either
 
-  // 5.2. Implement `traverse` for all Applicatives instead of Option
+  // 5.2. Implement `traverse` function
   def traverse[A, B](as: List[A])(f: A => Option[B]): Option[List[B]] = ???
 
   // traverse(List(1, 2, 3)) { i =>
@@ -125,4 +135,16 @@ object TypeClassesExamples extends App {
   // traverse(List(1, 2, 3)) { i =>
   //   Some(i + 1)
   // } == Some(List(2, 3, 4))
+
+  // 5.3. Implement `traverseA` for all Applicatives instead of Option
+
+  // traverseA(List(1, 2, 3)) { i =>
+  //   Either.cond(i % 2 == 1, i, "Error")
+  // } == Left("Error")
+
+  // traverseA(List(1, 2, 3)) { i =>
+  //   Right(i + 1): Either[Int, Any]
+  // } == Right(List(2, 3, 4))
+
+  // Scala Typeclassopedia: https://github.com/lemastero/scala_typeclassopedia
 }

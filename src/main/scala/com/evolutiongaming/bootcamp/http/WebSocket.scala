@@ -3,9 +3,10 @@ package com.evolutiongaming.bootcamp.http
 import cats.effect.std.Queue
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 import cats.syntax.all._
+import com.comcast.ip4s._
 import fs2.concurrent.Topic
 import fs2.{Pipe, Stream}
-import org.http4s.blaze.server._
+import org.http4s.ember.server._
 import org.http4s.client.websocket.{WSFrame, WSRequest}
 import org.http4s.dsl.io._
 import org.http4s.implicits._
@@ -53,15 +54,15 @@ object WebSocketServer extends IOApp {
       // `I == O == WebSocketFrame`. So the pipe transforms incoming WebSocket messages from the client to
       // outgoing WebSocket messages to send to the client.
       val echoPipe: Pipe[IO, WebSocketFrame, WebSocketFrame] =
-        _.collect {
-          case WebSocketFrame.Text(message, _) => WebSocketFrame.Text(message)
+        _.collect { case WebSocketFrame.Text(message, _) =>
+          WebSocketFrame.Text(message)
         }
 
       for {
         // Unbounded queue to store WebSocket messages from the client, which are pending to be processed.
         // For production use bounded queue seems a better choice. Unbounded queue may result in out of
         // memory error, if the client is sending messages quicker than the server can process them.
-        queue <- Queue.unbounded[IO, WebSocketFrame]
+        queue    <- Queue.unbounded[IO, WebSocketFrame]
         response <- wsb.build(
           // Sink, where the incoming WebSocket messages from the client are pushed to.
           receive = _.evalMap(queue.offer),
@@ -104,18 +105,17 @@ object WebSocketServer extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
     for {
       chatTopic <- Topic[IO, String]
-      _ <- BlazeServerBuilder[IO]
-        .bindHttp(port = 9002, host = "localhost")
+      _         <- EmberServerBuilder
+        .default[IO]
+        .withHost(ipv4"127.0.0.1")
+        .withPort(port"9002")
         .withHttpWebSocketApp(httpApp(chatTopic))
-        .serve
-        .compile
-        .drain
+        .build
+        .useForever
     } yield ExitCode.Success
 }
 
-// Http4s does not yet provide a full-fledged WebSocket client (contributions are welcome):
-// https://github.com/http4s/http4s/issues/330. However, there is a purely functional wrapper
-// for the built-in JDK 11+ HTTP client available.
+// Http4s provides a purely functional wrapper for the built-in JDK 11+ HTTP client.
 object WebSocketClient extends IOApp {
 
   private val uri = uri"ws://localhost:9002/echo"
@@ -123,15 +123,19 @@ object WebSocketClient extends IOApp {
   private def printLine(string: String = ""): IO[Unit] = IO(println(string))
 
   override def run(args: List[String]): IO[ExitCode] = {
-    val clientResource = Resource.eval(IO(HttpClient.newHttpClient()))
+    val clientResource = Resource
+      .eval(IO(HttpClient.newHttpClient()))
       .flatMap(JdkWSClient[IO](_).connectHighLevel(WSRequest(uri)))
 
     clientResource.use { client =>
       for {
         _ <- client.send(WSFrame.Text("Hello, world!"))
-        _ <- client.receiveStream.collectFirst {
-          case WSFrame.Text(s, _) => s
-        }.compile.string >>= printLine
+        _ <- client.receiveStream
+          .collectFirst { case WSFrame.Text(s, _) =>
+            s
+          }
+          .compile
+          .string >>= printLine
       } yield ExitCode.Success
     }
   }
