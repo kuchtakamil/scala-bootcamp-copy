@@ -21,6 +21,10 @@ class IntroSpec extends AnyFlatSpec with Matchers {
     /*
      * Task: implement the same test, but using `cats.Id` instead of `cats.IO`
      */
-    // logAndSend[Id](42) shouldBe true
+
+    implicit val log: Log[Id] = _ => ()
+    implicit val sendTrue: Send[Id] = _ => Response(200, true)
+
+     logAndSend[Id](42) shouldBe true
   }
 }
