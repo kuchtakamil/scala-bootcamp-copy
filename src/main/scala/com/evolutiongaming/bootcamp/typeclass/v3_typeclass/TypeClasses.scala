@@ -48,7 +48,8 @@ object FPJson extends App {
     implicit val optionIntJsonable: Jsonable[Option[Int]] = new Jsonable[Option[Int]] {
       override def toJson(entity: Option[Int]): Json = entity match {
         case Some(value) => intJsonable.toJson(value)
-        case None => Json("null")
+        case None        => Json("null")
+      }
     }
   }
 
@@ -66,6 +67,7 @@ object FPJson extends App {
     implicit def listJsonable[A](implicit jsonableA: Jsonable[A]): Jsonable[List[A]] = new Jsonable[List[A]] {
       override def toJson(entity: List[A]): Json =
         Json(entity.map(jsonableA.toJson(_)).mkString("[", ",", "]"))
+    }
   }
 
   object SingleAbstractMethod {

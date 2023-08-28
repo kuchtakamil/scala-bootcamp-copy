@@ -25,10 +25,11 @@ object DataStructures {
   // Arrays
   //
   // Arrays are mutable, indexed collections which are equivalent to Java's array's. They are indexed from 0.
-  val array = Array(1, 2, 3, 4, 5)
+  val array: Array[Int] = Array(1, 2, 3, 4, 5)
   array(2) // read the 3rd element, it will be 3
   array(3) = 7 // update the 4th element to be 7
 
+  val maybeInt: Option[Int] = array.lift(33)
   // Lists
   //
   // Immutable list represents ordered collections of elements of type A.
@@ -124,14 +125,14 @@ object DataStructures {
   // `vegetableAmounts` and prices per unit from `vegetablePrices`. Assume the price is 10 if not available
   // in `vegetablePrices`.
   val totalVegetableCost: Int = {
-    vegetableAmounts.map {
-      case (k, v) => v * vegetablePrices.getOrElse(k, 10)
+    vegetableAmounts.map { case (k, v) =>
+      v * vegetablePrices.getOrElse(k, 10)
     }.sum
 
-//    vegetableAmounts.foldLeft(0) { case (totalCost, (vegetable, amount)) =>
-//      val price = vegetablePrices.getOrElse(vegetable, 10)
-//      totalCost + price * amount
-//    }
+    vegetableAmounts.foldLeft(0) { case (totalCost, (vegetable, amount)) =>
+      val price = vegetablePrices.getOrElse(vegetable, 10)
+      totalCost + price * amount
+    }
 
 //    var sum = 0
 //    for {
@@ -147,7 +148,11 @@ object DataStructures {
   //
   // For example, the total weight of "olives" is 2 * 32 == 64.
   val totalVegetableWeights: Map[String, Int] = { // implement here
-    Map()
+//    Map()
+    for {
+      (vegetable, amount) <- vegetableAmounts
+      weight              <- vegetableWeights.get(vegetable)
+    } yield vegetable -> weight * amount
   }
 
   // Ranges and Sequences
@@ -233,7 +238,9 @@ object DataStructures {
   def sortConsideringEqualValues[T](map: Map[T, Int]): List[(Set[T], Int)] = {
     println("map.groupBy(_._2) === " + map.groupBy(_._2))
     println("map.groupBy(_._2).toList ===" + map.groupBy(_._2).toList)
-    map.groupBy(_._2).toList
+    map
+      .groupBy(_._2)
+      .toList
       .map { case (k, v) => (v.keys.toSet, k) }
       .sortBy(_._2)
 
